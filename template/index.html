@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audiobook TTS</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            padding: 50px;
+            background: #f5f5f5;
+        }
+        h2 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        audio {
+            margin-top: 20px;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🎧 Audiobook Generator</h2>
+
+    <input type="file" id="fileInput">
+    <br>
+    <button onclick="upload()">Convert</button>
+
+    <p id="status"></p>
+
+    <audio id="player" controls style="display:none;"></audio>
+    <br>
+    <a id="download" style="display:none;">⬇ Download</a>
+
+    <script>
+        async function upload() {
+            const file = document.getElementById("fileInput").files[0];
+
+            if (!file) {
+                alert("Chọn file trước!");
+                return;
+            }
+
+            document.getElementById("status").innerText = "⏳ Processing...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const res = await fetch("http://127.0.0.1:5000/api/tts", {
+                method: "POST",
+                body: formData
+            });
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            const player = document.getElementById("player");
+            player.src = url;
+            player.style.display = "block";
+
+            const download = document.getElementById("download");
+            download.href = url;
+            download.download = "audiobook.mp3";
+            download.style.display = "block";
+
+            document.getElementById("status").innerText = "✅ Done!";
+        }
+    </script>
+
+</body>
+</html>

@@ -26,7 +26,7 @@ def read_file(file):
     else:
         raise Exception("Unsupported file format")
 
-# ===== SPLIT PARAGRAPHS =====
+# ===== SPLIT =====
 def split_paragraphs(text):
     return [p.strip() for p in text.split("\n") if p.strip()]
 
@@ -38,43 +38,46 @@ def build_ssml(text):
             <prosody rate='0.92'>
                 {text}
             </prosody>
-            <break time="500ms"/>
         </voice>
     </speak>
     """
 
-# ===== SYNTHESIZE AUDIO =====
-def synthesize(text):
+# ===== TTS 1 SEGMENT =====
+def synthesize_segment(text):
     speech_config = speechsdk.SpeechConfig(
         subscription=SPEECH_KEY,
         region=SPEECH_REGION
     )
 
-    final_audio = AudioSegment.empty()
+    synthesizer = speechsdk.SpeechSynthesizer(
+        speech_config=speech_config,
+        audio_config=None
+    )
+
+    result = synthesizer.speak_ssml_async(build_ssml(text)).get()
+
+    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        return AudioSegment.from_file(io.BytesIO(result.audio_data), format="wav")
+    else:
+        return None
+
+# ===== MAIN SYNTH =====
+def synthesize_full(text):
     paragraphs = split_paragraphs(text)
 
+    final_audio = AudioSegment.empty()
+
     for i, para in enumerate(paragraphs):
-        ssml = build_ssml(para)
+        print(f"🔊 Processing {i}")
 
-        synthesizer = speechsdk.SpeechSynthesizer(
-            speech_config=speech_config,
-            audio_config=None
-        )
+        audio = synthesize_segment(para)
 
-        result = synthesizer.speak_ssml_async(ssml).get()
-
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            audio = AudioSegment.from_file(
-                io.BytesIO(result.audio_data),
-                format="wav"
-            )
-
+        if audio:
             final_audio += audio
-            final_audio += AudioSegment.silent(duration=300)
-
-            print(f"✅ Paragraph {i}")
+            final_audio += AudioSegment.silent(duration=400)
         else:
-            print(f"❌ Error at paragraph {i}")
+            # fallback silence
+            final_audio += AudioSegment.silent(duration=1000)
 
     return final_audio
 
@@ -85,7 +88,7 @@ def tts():
         file = request.files["file"]
 
         text = read_file(file)
-        audio = synthesize(text)
+        audio = synthesize_full(text)
 
         output = io.BytesIO()
         audio.export(output, format="mp3")
@@ -94,13 +97,12 @@ def tts():
         return send_file(
             output,
             mimetype="audio/mpeg",
-            as_attachment=False
+            download_name="audiobook.mp3"
         )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ===== RUN =====
 if __name__ == "__main__":
     app.run(debug=True)

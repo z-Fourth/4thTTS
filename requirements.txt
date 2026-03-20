@@ -1,0 +1,6 @@
+flask
+flask-cors
+gunicorn
+azure-cognitiveservices-speech
+python-docx
+pydub

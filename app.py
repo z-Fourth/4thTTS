@@ -1,6 +1,6 @@
 import os
 import io
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, render_template
 from flask_cors import CORS
 import azure.cognitiveservices.speech as speechsdk
 from docx import Document

@@ -1,76 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Audiobook TTS</title>
+    <meta charset="UTF-8">
+    <title>🎧 Audiobook TTS</title>
+
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
             text-align: center;
-            padding: 50px;
-            background: #f5f5f5;
+            padding: 40px;
         }
+
+        .container {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            margin: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
         h2 {
-            color: #333;
+            margin-bottom: 20px;
         }
+
+        input[type="file"] {
+            margin: 15px 0;
+        }
+
         button {
             padding: 10px 20px;
-            margin-top: 10px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
             cursor: pointer;
+            transition: 0.3s;
         }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
         audio {
             margin-top: 20px;
-            width: 300px;
+            width: 100%;
+        }
+
+        a {
+            display: block;
+            margin-top: 10px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .loading {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
         }
     </style>
 </head>
+
 <body>
 
+<div class="container">
     <h2>🎧 Audiobook Generator</h2>
 
-    <input type="file" id="fileInput">
+    <input type="file" id="fileInput" accept=".txt,.docx">
     <br>
+
     <button onclick="upload()">Convert</button>
 
     <p id="status"></p>
 
     <audio id="player" controls style="display:none;"></audio>
-    <br>
+
     <a id="download" style="display:none;">⬇ Download</a>
+</div>
 
-    <script>
-        async function upload() {
-            const file = document.getElementById("fileInput").files[0];
+<script>
+async function upload() {
+    const file = document.getElementById("fileInput").files[0];
+    const status = document.getElementById("status");
 
-            if (!file) {
-                alert("Chọn file trước!");
-                return;
-            }
+    if (!file) {
+        alert("Vui lòng chọn file!");
+        return;
+    }
 
-            document.getElementById("status").innerText = "⏳ Processing...";
+    status.innerText = "⏳ Đang xử lý...";
+    status.classList.add("loading");
 
-            const formData = new FormData();
-            formData.append("file", file);
+    const formData = new FormData();
+    formData.append("file", file);
 
-            const res = await fetch("http://127.0.0.1:5000/api/tts", {
-                method: "POST",
-                body: formData
-            });
+    try {
+        // 🔥 FIX: dùng relative path
+        const res = await fetch("/api/tts", {
+            method: "POST",
+            body: formData
+        });
 
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-
-            const player = document.getElementById("player");
-            player.src = url;
-            player.style.display = "block";
-
-            const download = document.getElementById("download");
-            download.href = url;
-            download.download = "audiobook.mp3";
-            download.style.display = "block";
-
-            document.getElementById("status").innerText = "✅ Done!";
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText);
         }
-    </script>
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const player = document.getElementById("player");
+        player.src = url;
+        player.style.display = "block";
+
+        const download = document.getElementById("download");
+        download.href = url;
+        download.download = "audiobook.mp3";
+        download.style.display = "block";
+
+        status.innerText = "✅ Hoàn thành!";
+        status.classList.remove("loading");
+
+    } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Lỗi: " + err.message;
+        status.classList.remove("loading");
+    }
+}
+</script>
 
 </body>
 </html>
